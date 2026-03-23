@@ -20,46 +20,67 @@ def save(path, data):
 # ── Auth classique ──────────────────────────────────────────────
 @app.route('/register/plain', methods=['POST'])
 def register_plain():
-    # Lire username + password dans request.json
-    # Stocker dans db_plain.json EN CLAIR
-    # Retourner confirmation + warning
+    data = request.json
+    username, password = data['username'], data['password']
+    db = load(DB_PLAIN)
+    db[username] = password
+    save(DB_PLAIN, db)
+    return jsonify({'status': 'ok', 'warning': 'mot de passe stocké EN CLAIR'})
 
 @app.route('/login/plain', methods=['POST'])
 def login_plain():
-    # Lire username + password
-    # Comparer avec db_plain.json
-    # Retourner succès ou échec
+    data = request.json
+    username, password = data['username'], data['password']
+    db = load(DB_PLAIN)
+    if db.get(username) == password:
+        return jsonify({'status': 'ok', 'message': 'authentification réussie'})
+    return jsonify({'status': 'fail', 'message': 'identifiants incorrects'}), 401
 
 # ── Auth ZKP ────────────────────────────────────────────────────
 @app.route('/register/zkp', methods=['POST'])
 def register_zkp():
-    # Lire username + v (= s² mod n, calculé côté client)
-    # Stocker v dans db_zkp.json
-    # Retourner confirmation
+    data = request.json
+    username, v = data['username'], data['v']
+    db = load(DB_ZKP)
+    db[username] = v
+    save(DB_ZKP, db)
+    return jsonify({'status': 'ok', 'message': 'clé publique v enregistrée'})
 
 @app.route('/zkp/commit', methods=['POST'])
 def zkp_commit():
-    # Lire username + x (engagement du client)
-    # Générer b = bit aléatoire (défi)
-    # Stocker x, b, username en session
-    # Retourner b
+    data = request.json
+    username, x = data['username'], data['x']
+    b = fs.server_challenge()
+    session['zkp_username'] = username
+    session['zkp_x'] = x
+    session['zkp_b'] = b
+    return jsonify({'b': b})
 
 @app.route('/zkp/verify', methods=['POST'])
 def zkp_verify():
-    # Lire y (réponse du client)
-    # Récupérer x, b, username depuis session
-    # Récupérer v depuis db_zkp.json
-    # Appeler fs.server_verify(x, y, v, b)
-    # Retourner succès ou échec
+    data = request.json
+    y = data['y']
+    username = session.get('zkp_username')
+    x = session.get('zkp_x')
+    b = session.get('zkp_b')
+    if username is None or x is None or b is None:
+        return jsonify({'status': 'fail', 'message': 'session invalide'}), 400
+    db = load(DB_ZKP)
+    v = db.get(username)
+    if v is None:
+        return jsonify({'status': 'fail', 'message': 'utilisateur inconnu'}), 404
+    if fs.server_verify(x, y, v, b):
+        return jsonify({'status': 'ok'})
+    return jsonify({'status': 'fail'}), 401
 
 # ── Attaquant ───────────────────────────────────────────────────
 @app.route('/attack/plain')
 def attack_plain():
-    # Retourner le contenu brut de db_plain.json
+    return jsonify(load(DB_PLAIN))
 
 @app.route('/attack/zkp')
 def attack_zkp():
-    # Retourner le contenu brut de db_zkp.json
+    return jsonify(load(DB_ZKP))
 
 if __name__ == '__main__':
     app.run(port=5001, debug=True)
