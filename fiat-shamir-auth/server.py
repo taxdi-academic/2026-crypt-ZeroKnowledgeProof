@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, session
 from crypto import FiatShamir
-import json, os, random
+import json, os
 
 app = Flask(__name__)
 app.secret_key = 'demo-secret'
@@ -17,7 +17,7 @@ def load(path):
 def save(path, data):
     with open(path, 'w') as f: json.dump(data, f, indent=2)
 
-# ── Auth classique ──────────────────────────────────────────────
+# ── Classic authentication ──────────────────────────────────────
 @app.route('/register/plain', methods=['POST'])
 def register_plain():
     data = request.json
@@ -25,7 +25,7 @@ def register_plain():
     db = load(DB_PLAIN)
     db[username] = password
     save(DB_PLAIN, db)
-    return jsonify({'status': 'ok', 'warning': 'mot de passe stocké EN CLAIR'})
+    return jsonify({'status': 'ok', 'warning': 'password stored IN PLAINTEXT'})
 
 @app.route('/login/plain', methods=['POST'])
 def login_plain():
@@ -33,10 +33,10 @@ def login_plain():
     username, password = data['username'], data['password']
     db = load(DB_PLAIN)
     if db.get(username) == password:
-        return jsonify({'status': 'ok', 'message': 'authentification réussie'})
-    return jsonify({'status': 'fail', 'message': 'identifiants incorrects'}), 401
+        return jsonify({'status': 'ok', 'message': 'authentication successful'})
+    return jsonify({'status': 'fail', 'message': 'invalid credentials'}), 401
 
-# ── Auth ZKP ────────────────────────────────────────────────────
+# ── ZKP authentication ──────────────────────────────────────────
 @app.route('/register/zkp', methods=['POST'])
 def register_zkp():
     data = request.json
@@ -44,7 +44,7 @@ def register_zkp():
     db = load(DB_ZKP)
     db[username] = v
     save(DB_ZKP, db)
-    return jsonify({'status': 'ok', 'message': 'clé publique v enregistrée'})
+    return jsonify({'status': 'ok', 'message': 'public key v registered'})
 
 @app.route('/zkp/commit', methods=['POST'])
 def zkp_commit():
@@ -64,16 +64,16 @@ def zkp_verify():
     x = session.get('zkp_x')
     b = session.get('zkp_b')
     if username is None or x is None or b is None:
-        return jsonify({'status': 'fail', 'message': 'session invalide'}), 400
+        return jsonify({'status': 'fail', 'message': 'invalid session'}), 400
     db = load(DB_ZKP)
     v = db.get(username)
     if v is None:
-        return jsonify({'status': 'fail', 'message': 'utilisateur inconnu'}), 404
+        return jsonify({'status': 'fail', 'message': 'unknown user'}), 404
     if fs.server_verify(x, y, v, b):
         return jsonify({'status': 'ok'})
     return jsonify({'status': 'fail'}), 401
 
-# ── Attaquant ───────────────────────────────────────────────────
+# ── Attacker ────────────────────────────────────────────────────
 @app.route('/attack/plain')
 def attack_plain():
     return jsonify(load(DB_PLAIN))

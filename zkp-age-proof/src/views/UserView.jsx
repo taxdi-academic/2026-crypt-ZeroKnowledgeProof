@@ -4,7 +4,7 @@ import StepIndicator from '../components/StepIndicator'
 import IdentityCard from '../components/IdentityCard'
 import ProofQRCode from '../components/ProofQRCode'
 
-const STEPS = ['Date de naissance', 'Calcul ZKP', 'Preuve prête']
+const STEPS = ['Date of birth', 'ZKP computation', 'Proof ready']
 
 const inputStyle = {
   background: 'var(--surface2)',
@@ -40,7 +40,18 @@ export default function UserView() {
     const year  = parseInt(form.year)
 
     if (!day || !month || !year || year < 1900 || year > new Date().getFullYear()) {
-      setError('Veuillez entrer une date de naissance valide.')
+      setError('Please enter a valid date of birth.')
+      return
+    }
+
+    // Check the date actually exists (e.g. February 30, January 32…)
+    const date = new Date(year, month - 1, day)
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      setError(`${String(month).padStart(2,'0')}/${String(day).padStart(2,'0')}/${year} is not a valid date.`)
       return
     }
 
@@ -51,7 +62,7 @@ export default function UserView() {
       setPublicSignals(result.publicSignals)
       setStep(3)
     } catch (err) {
-      setError('Erreur : ' + err.message)
+      setError('Error: ' + err.message)
       setStep(1)
     }
   }
@@ -69,10 +80,10 @@ export default function UserView() {
 
       {/* Title */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 8 }}>Générer une preuve d&apos;âge</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 8 }}>Generate an age proof</h1>
         <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
-          Prouvez cryptographiquement que vous êtes majeur,<br />
-          sans révéler votre date de naissance.
+          Cryptographically prove you are of legal age,<br />
+          without revealing your date of birth.
         </p>
       </div>
 
@@ -93,13 +104,13 @@ export default function UserView() {
           <form onSubmit={handleGenerate} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <label style={{ fontSize: 12, color: 'var(--text)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 10 }}>
-                Date de naissance
+                Date of birth
               </label>
               <div style={{ display: 'flex', gap: 10 }}>
                 {[
-                  { name: 'day',   placeholder: 'JJ',   max: 31, flex: 1 },
+                  { name: 'day',   placeholder: 'DD',   max: 31, flex: 1 },
                   { name: 'month', placeholder: 'MM',   max: 12, flex: 1 },
-                  { name: 'year',  placeholder: 'AAAA', max: new Date().getFullYear(), flex: 2 },
+                  { name: 'year',  placeholder: 'YYYY', max: new Date().getFullYear(), flex: 2 },
                 ].map(({ name, placeholder, max, flex }) => (
                   <input
                     key={name}
@@ -147,7 +158,7 @@ export default function UserView() {
               color: 'rgba(168, 85, 247, 0.9)',
               lineHeight: 1.6,
             }}>
-              🔒 Votre date de naissance reste <strong>privée</strong>. Le circuit ZKP ne divulgue que le résultat binaire majeur/mineur.
+              🔒 Your date of birth stays <strong>private</strong>. The ZKP circuit only reveals the binary result: of age / underage.
             </div>
 
             <button
@@ -168,7 +179,7 @@ export default function UserView() {
               onMouseOver={e => e.target.style.opacity = '0.9'}
               onMouseOut={e => e.target.style.opacity = '1'}
             >
-              Générer la preuve ZKP →
+              Generate ZKP proof →
             </button>
           </form>
         )}
@@ -186,10 +197,10 @@ export default function UserView() {
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             <div style={{ textAlign: 'center' }}>
               <p style={{ color: 'var(--text2)', fontWeight: 500, marginBottom: 6 }}>
-                Calcul de la preuve en cours…
+                Computing proof…
               </p>
               <p style={{ color: 'var(--text)', fontSize: 12 }}>
-                Le circuit Groth16 génère une preuve cryptographique.<br />Cela peut prendre quelques secondes.
+                The Groth16 circuit is generating a cryptographic proof.<br />This may take a few seconds.
               </p>
             </div>
           </div>
@@ -213,7 +224,7 @@ export default function UserView() {
                 padding: 0,
               }}
             >
-              ← Recommencer
+              ← Start over
             </button>
           </div>
         )}

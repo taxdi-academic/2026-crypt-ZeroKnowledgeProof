@@ -17,12 +17,12 @@ export default function VerifierView() {
     try {
       parsed = JSON.parse(input.trim())
     } catch {
-      setError('JSON invalide. Collez la preuve copiée depuis la vue utilisateur.')
+      setError('Invalid JSON. Paste the proof copied from the user view.')
       return
     }
 
     if (!parsed.proof || !parsed.publicSignals) {
-      setError('Format incorrect : les champs "proof" et "publicSignals" sont requis.')
+      setError('Invalid format: "proof" and "publicSignals" fields are required.')
       return
     }
 
@@ -31,7 +31,7 @@ export default function VerifierView() {
       const result = await verifyAgeProof(parsed.proof, parsed.publicSignals)
       setStatus(result)
     } catch (err) {
-      setError('Erreur lors de la vérification : ' + err.message)
+      setError('Verification error: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -48,10 +48,10 @@ export default function VerifierView() {
 
       {/* Title */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
-        <h1 style={{ fontSize: 22, marginBottom: 8 }}>Terminal de vérification</h1>
+        <h1 style={{ fontSize: 22, marginBottom: 8 }}>Verification terminal</h1>
         <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
-          Collez la preuve JSON fournie par l&apos;utilisateur pour vérifier<br />
-          cryptographiquement sa majorité.
+          Paste the JSON proof provided by the user to cryptographically<br />
+          verify their legal age.
         </p>
       </div>
 
@@ -95,7 +95,7 @@ export default function VerifierView() {
               letterSpacing: '0.08em', textTransform: 'uppercase',
               display: 'block', marginBottom: 8,
             }}>
-              Preuve ZKP (JSON)
+              ZKP Proof (JSON)
             </label>
             <textarea
               value={input}
@@ -165,7 +165,7 @@ export default function VerifierView() {
                 }} />
               )}
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              {loading ? 'Vérification en cours…' : 'Vérifier la preuve'}
+              {loading ? 'Verifying…' : 'Verify proof'}
             </button>
 
             {status !== null && (
@@ -182,7 +182,7 @@ export default function VerifierView() {
                   cursor: 'pointer',
                 }}
               >
-                Effacer
+                Clear
               </button>
             )}
           </div>

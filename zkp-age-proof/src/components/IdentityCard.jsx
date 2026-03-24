@@ -42,10 +42,10 @@ export default function IdentityCard() {
       }}>
         <div>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            République Française
+            French Republic
           </div>
           <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            Carte Nationale d&apos;Identité
+            National Identity Card
           </div>
         </div>
         <div style={{ fontSize: 22 }}>🇫🇷</div>
@@ -72,14 +72,14 @@ export default function IdentityCard() {
 
         {/* Fields */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <BlurredField label="NOM" />
-          <BlurredField label="PRÉNOMS" width={100} />
-          <BlurredField label="NÉ(E) LE" width={90} />
+          <BlurredField label="LAST NAME" />
+          <BlurredField label="FIRST NAME" width={100} />
+          <BlurredField label="DATE OF BIRTH" width={90} />
 
           {/* Majority — visible */}
           <div style={{ marginTop: 2 }}>
             <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.12em', marginBottom: 3 }}>
-              MAJORITÉ
+              LEGAL AGE
             </div>
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -89,7 +89,7 @@ export default function IdentityCard() {
               border: '1px solid rgba(63, 185, 80, 0.4)',
               fontSize: 11, fontWeight: 600, color: '#3fb950',
             }}>
-              <span>✓</span> Vérifiée par ZKP
+              <span>✓</span> Verified by ZKP
             </div>
           </div>
         </div>
@@ -120,7 +120,7 @@ export default function IdentityCard() {
         textAlign: 'center',
         letterSpacing: '0.05em',
       }}>
-        🔒 Données personnelles protégées · Preuve à divulgation nulle de connaissance
+        🔒 Personal data protected · Zero-Knowledge Proof
       </div>
     </div>
   )

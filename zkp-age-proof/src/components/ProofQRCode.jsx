@@ -25,7 +25,7 @@ export default function ProofQRCode({ proof, publicSignals }) {
 
       <div style={{ textAlign: 'center' }}>
         <p style={{ fontSize: 12, color: 'var(--text)', marginBottom: 12 }}>
-          Présente ce QR code au loueur — aucune donnée personnelle n&apos;est incluse.
+          Show this QR code to the verifier — no personal data is included.
         </p>
 
         <button
@@ -45,7 +45,7 @@ export default function ProofQRCode({ proof, publicSignals }) {
             gap: 6,
           }}
         >
-          {copied ? '✓ Copié !' : '⎘ Copier la preuve JSON'}
+          {copied ? '✓ Copied!' : '⎘ Copy proof JSON'}
         </button>
       </div>
     </div>

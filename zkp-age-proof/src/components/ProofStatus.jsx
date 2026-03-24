@@ -36,14 +36,14 @@ export default function ProofStatus({ valid }) {
           letterSpacing: '0.08em',
           marginBottom: 8,
         }}>
-          {valid ? 'MAJEUR' : 'MINEUR'}
+          {valid ? 'OF AGE' : 'UNDERAGE'}
         </div>
         <div style={{
           fontSize: 13, color: valid ? 'rgba(63,185,80,0.8)' : 'rgba(248,81,73,0.8)',
         }}>
           {valid
-            ? 'Preuve cryptographique valide — accès autorisé'
-            : 'Preuve invalide ou personne mineure — accès refusé'}
+            ? 'Valid cryptographic proof — access granted'
+            : 'Invalid proof or underage person — access denied'}
         </div>
       </div>
 

@@ -30,7 +30,7 @@ export default function App() {
             fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '-0.5px',
           }}>ZK</div>
           <span style={{ fontWeight: 600, color: 'var(--white)', fontSize: 15 }}>
-            ZeroProof<span style={{ color: 'var(--purple2)', fontWeight: 400 }}> · âge</span>
+            ZeroProof<span style={{ color: 'var(--purple2)', fontWeight: 400 }}> · age</span>
           </span>
         </div>
 
@@ -43,7 +43,7 @@ export default function App() {
           padding: 3,
           gap: 2,
         }}>
-          {[['user', '👤 Utilisateur'], ['verifier', '🔍 Loueur']].map(([id, label]) => (
+          {[['user', '👤 User'], ['verifier', '🔍 Verifier']].map(([id, label]) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
@@ -102,11 +102,11 @@ export default function App() {
         fontSize: 11,
         color: 'var(--text)',
       }}>
-        <span>Preuve à divulgation nulle de connaissance</span>
+        <span>Zero-Knowledge Proof</span>
         <span style={{ color: 'var(--border2)' }}>·</span>
-        <span>Aucune donnée personnelle transmise</span>
+        <span>No personal data transmitted</span>
         <span style={{ color: 'var(--border2)' }}>·</span>
-        <span>Circuit Circom 2.0</span>
+        <span>Circom 2.0 circuit</span>
       </footer>
     </div>
   )
