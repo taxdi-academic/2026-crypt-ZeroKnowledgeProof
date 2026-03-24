@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>ZKP Auth — Démo Schnorr</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+    body { background: #f5f5f4; color: #1c1c1a; font-size: 13px; }
+    .wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+    .panel { background: #fff; border: 1px solid #e5e4df; border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .channel { background: #fff; border: 1px dashed #b4b2a9; border-radius: 12px; padding: 12px; grid-column: 1 / -1; }
+    label { font-size: 11px; font-weight: 600; color: #888780; display: block; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .4px; }
+    input { width: 100%; padding: 7px 10px; border: 1px solid #d3d1c7; border-radius: 8px; font-size: 13px; font-family: monospace; }
+    button { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 500; }
+    .btn-purple { background: #534AB7; color: #fff; }
+    .btn-teal   { background: #0F6E56; color: #fff; }
+    .log { background: #f8f7f4; border: 1px solid #e5e4df; border-radius: 8px; padding: 8px; font-family: monospace; font-size: 11px; min-height: 80px; max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+    .entry { padding: 4px 8px; border-radius: 5px; }
+    .local { background: #f1efe8; border-left: 3px solid #b4b2a9; }
+    .send  { background: #EEEDFE; border-left: 3px solid #534AB7; }
+    .recv  { background: #E1F5EE; border-left: 3px solid #0F6E56; }
+    .ok    { background: #EAF3DE; border-left: 3px solid #3B6D11; }
+    .err   { background: #FCEBEB; border-left: 3px solid #A32D2D; }
+    .key   { font-size: 10px; font-weight: 700; color: #888780; text-transform: uppercase; }
+    .val   { word-break: break-all; color: #1c1c1a; }
+    .pkt   { font-family: monospace; font-size: 11px; padding: 3px 0; display: flex; gap: 8px; }
+    .dir-c { color: #534AB7; font-weight: 700; min-width: 30px; }
+    .dir-s { color: #0F6E56; font-weight: 700; min-width: 30px; }
+    .pkt-label { font-weight: 600; min-width: 120px; color: #3d3d3a; }
+    .pkt-val   { color: #888780; word-break: break-all; }
+    h3 { font-size: 14px; font-weight: 500; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+    .bp { background: #EEEDFE; color: #3C3489; }
+    .bt { background: #E1F5EE; color: #085041; }
+    .state { background: #f8f7f4; border: 1px solid #e5e4df; border-radius: 8px; padding: 8px; font-family: monospace; font-size: 11px; color: #888780; }
+    .tabs { display: flex; gap: 4px; }
+    .tab { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid #d3d1c7; background: transparent; color: #888780; }
+    .tab.on { background: #534AB7; color: #fff; border-color: #534AB7; }
+    .row { display: flex; gap: 8px; align-items: flex-end; }
+    .row input { flex: 1; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- PANNEAU CLIENT -->
+  <div class="panel">
+    <h3>Client (navigateur) <span class="badge bp">Prouveur</span></h3>
+    <div>
+      <label>Nom d'utilisateur</label>
+      <input id="username" value="alice" />
+    </div>
+    <div>
+      <label>Mot de passe (secret x)</label>
+      <div class="row">
+        <input id="password" type="password" value="monsecret42" />
+        <button onclick="togglePw()" id="tpw" style="background:#e5e4df;color:#3d3d3a;min-width:60px">Voir</button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab on" id="tr" onclick="setTab('r')">Inscription</button>
+      <button class="tab"    id="tl" onclick="setTab('l')">Connexion</button>
+    </div>
+    <div id="pr"><button class="btn-purple" onclick="doRegister()">S'inscrire</button></div>
+    <div id="pl" style="display:none"><button class="btn-teal" onclick="doLogin()">Se connecter</button></div>
+    <div>
+      <label>Journal client</label>
+      <div class="log" id="lc"></div>
+    </div>
+  </div>
+
+  <!-- PANNEAU SERVEUR -->
+  <div class="panel">
+    <h3>Serveur <span class="badge bt">Vérifieur</span></h3>
+    <div>
+      <label>Base de données (clés publiques uniquement)</label>
+      <div class="state" id="srv-state">Vide — aucun utilisateur</div>
+    </div>
+    <div>
+      <label>Journal serveur</label>
+      <div class="log" id="ls"></div>
+    </div>
+  </div>
+
+  <!-- PANNEAU RÉSEAU -->
+  <div class="channel">
+    <label>Réseau — ce qui transite réellement entre client et serveur</label>
+    <div id="net" style="display:flex;flex-direction:column;gap:2px">
+      <span style="color:#b4b2a9;font-size:11px;font-family:monospace">Aucun échange pour l'instant.</span>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+const API = 'http://localhost:3000';
+
+// ─── Ed25519 (copie du shared/ed25519.ts pour le navigateur) ─────────────
+const PRIME = 2n**255n - 19n;
+const ORDER = 2n**252n + 27742317777372353535851937790883648493n;
+
+const mod = (a,n=PRIME) => ((a%n)+n)%n;
+const pow = (b,e,m) => {let r=1n;b=mod(b,m);while(e>0n){if(e%2n)r=mod(r*b,m);e>>=1n;b=mod(b*b,m)}return r};
+const inv = a => pow(mod(a),PRIME-2n,PRIME);
+
+// d = -121665/121666 mod p
+const D  = mod(-121665n * pow(121666n, PRIME-2n, PRIME));
+// GY = 4/5 mod p
+const GY = mod(4n * pow(5n, PRIME-2n, PRIME));
+// GX = sqrt((GY²-1)/(1+D·GY²)) mod p  (p ≡ 5 mod 8)
+const _gy2 = mod(GY*GY);
+const _x2  = mod(mod(_gy2-1n)*inv(mod(1n+D*_gy2)));
+const _xc  = pow(_x2,(PRIME+3n)/8n,PRIME);
+const GX   = mod(_xc*_xc)===_x2 ? _xc : mod(_xc*pow(2n,(PRIME-1n)/4n,PRIME));
+const G    = [GX,GY];
+const addPt = (P,Q) => {
+  if(!P)return Q; if(!Q)return P;
+  const[x1,y1]=P,[x2,y2]=Q;
+  const dxy=mod(D*mod(x1*x2)*mod(y1*y2));
+  return[mod(mod(x1*y2+y1*x2)*inv(mod(1n+dxy))),mod(mod(y1*y2+x1*x2)*inv(mod(1n-dxy)))];
+};
+const mulPt = (k,P) => {k=mod(k,ORDER);let R=null,Q=P;while(k>0n){if(k&1n)R=addPt(R,Q);Q=addPt(Q,Q);k>>=1n}return R};
+const pwToX = pw => {let h=0n;for(let i=0;i<pw.length;i++)h=(h*1000003n+BigInt(pw.charCodeAt(i)))%ORDER;return h||1n};
+const rndSc = () => {const a=crypto.getRandomValues(new Uint8Array(32));let v=0n;for(const b of a)v=(v<<8n)|BigInt(b);return mod(v,ORDER-1n)+1n};
+const short = (v,n=18) => {const s=v.toString();return s.length<=n?s:s.slice(0,n)+'…'};
+const ptStr = P => `(${short(P[0],10)}, ${short(P[1],10)})`;
+
+// ─── UI helpers ───────────────────────────────────────────────────────────
+const lc  = document.getElementById('lc');
+const ls  = document.getElementById('ls');
+const net = document.getElementById('net');
+
+const addLog = (el,type,key,val) => {
+  const d=document.createElement('div');
+  d.className='entry '+type;
+  d.innerHTML=`<div class="key">${key}</div><div class="val">${val}</div>`;
+  el.appendChild(d);d.scrollIntoView({block:'nearest'});
+};
+const addNet = (fromClient,label,val) => {
+  if(net.children.length===1&&net.children[0].tagName==='SPAN')net.innerHTML='';
+  const d=document.createElement('div');
+  d.className='pkt';
+  d.innerHTML=`<span class="${fromClient?'dir-c':'dir-s'}">${fromClient?'→':'←'}</span><span class="pkt-label">${label}</span><span class="pkt-val">${val}</span>`;
+  net.appendChild(d);
+};
+const netSep = () => {
+  if(net.children.length===1&&net.children[0].tagName==='SPAN')return;
+  const hr=document.createElement('hr');
+  hr.style.cssText='border:none;border-top:1px solid #e5e4df;margin:4px 0';
+  net.appendChild(hr);
+};
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+window.togglePw = () => {
+  const i=document.getElementById('password');
+  i.type=i.type==='password'?'text':'password';
+  document.getElementById('tpw').textContent=i.type==='password'?'Voir':'Cacher';
+};
+window.setTab = t => {
+  document.getElementById('tr').className='tab'+(t==='r'?' on':'');
+  document.getElementById('tl').className='tab'+(t==='l'?' on':'');
+  document.getElementById('pr').style.display=t==='r'?'':'none';
+  document.getElementById('pl').style.display=t==='l'?'':'none';
+};
+
+// ─── État serveur (miroir local pour la démo) ─────────────────────────────
+const serverDB = new Map(); // username → P
+const updateSrvState = () => {
+  const el = document.getElementById('srv-state');
+  if(serverDB.size===0){el.textContent='Vide — aucun utilisateur';return;}
+  el.innerHTML = [...serverDB.entries()].map(([u,p])=>
+    `<div><span style="color:#0F6E56;font-weight:600">${u}</span>  P=${ptStr(p)}</div>`
+  ).join('');
+};
+
+// ─── Inscription ──────────────────────────────────────────────────────────
+window.doRegister = async () => {
+  lc.innerHTML='';ls.innerHTML='';netSep();
+  const username=document.getElementById('username').value.trim();
+  const password=document.getElementById('password').value;
+  if(!username||!password){alert('Remplis les deux champs');return;}
+
+  addLog(lc,'local','[1] Dérivation du secret','x = hash(password)  mod ORDER');
+  await sleep(150);
+  const x=pwToX(password);
+  addLog(lc,'local','x  (secret — ne quitte jamais le client)',short(x,32));
+
+  addLog(lc,'local','[2] Calcul de la clé publique','P = x · G  (multiplication scalaire Ed25519)');
+  await sleep(200);
+  const P=mulPt(x,G);
+  if(!P){addLog(lc,'err','Erreur','Échec du calcul de la clé publique');return;}
+  addLog(lc,'local','P  (clé publique)',ptStr(P));
+
+  addLog(lc,'send','[3] Envoi au serveur','→ POST /register  { username, P }');
+  addNet(true,'POST /register',`username="${username}"  P=${ptStr(P)}`);
+
+  const res = await fetch(`${API}/register`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,P:[P[0].toString(),P[1].toString()]})});
+  const data = await res.json();
+
+  if(!res.ok){
+    addLog(lc,'err','Erreur serveur',data.error);
+    addLog(ls,'err','Erreur /register',data.error);
+    return;
+  }
+
+  addNet(false,'200 OK','{ ok: true }');
+  addLog(lc,'ok','Inscription réussie','Clé publique enregistrée. Mot de passe jamais transmis.');
+
+  // ── Côté serveur ──
+  await sleep(80);
+  addLog(ls,'recv','[1] POST /register reçu',`username="${username}"  P=${ptStr(P)}`);
+  await sleep(80);
+  addLog(ls,'local','[2] Stockage clé publique','users.set(username, { P })  — mot de passe absent');
+  await sleep(80);
+  addLog(ls,'ok','[3] Réponse 200','{ ok: true }');
+  serverDB.set(username, P);
+  updateSrvState();
+};
+
+// ─── Connexion ────────────────────────────────────────────────────────────
+window.doLogin = async () => {
+  lc.innerHTML='';ls.innerHTML='';netSep();
+  const username=document.getElementById('username').value.trim();
+  const password=document.getElementById('password').value;
+  if(!username||!password){alert('Remplis les deux champs');return;}
+
+  addLog(lc,'local','[1] Recalcul du secret','x = hash(password)  mod ORDER');
+  await sleep(150);
+  const x=pwToX(password);
+  addLog(lc,'local','x  (secret, calculé localement)',short(x,32));
+
+  addLog(lc,'local','[2] Génération du nonce éphémère','r = random scalar  (usage unique)');
+  await sleep(150);
+  const r=rndSc();
+  addLog(lc,'local','r  (nonce, jeté après usage)',short(r,32));
+
+  addLog(lc,'local','[3] Calcul de l\'engagement','R = r · G');
+  await sleep(150);
+  const R=mulPt(r,G);
+  if(!R){addLog(lc,'err','Erreur','Échec du calcul de l\'engagement');return;}
+  addLog(lc,'local','R  (engagement public)',ptStr(R));
+
+  addLog(lc,'send','[4] Envoi engagement','→ POST /challenge  { username, R }');
+  addNet(true,'POST /challenge',`username="${username}"  R=${ptStr(R)}`);
+
+  const r1=await fetch(`${API}/challenge`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,R:[R[0].toString(),R[1].toString()]})});
+  const d1=await r1.json();
+  if(!r1.ok){addNet(false,r1.status.toString(),JSON.stringify(d1));addLog(lc,'err','Erreur',d1.error);return;}
+
+  const c=BigInt(d1.c);
+  addNet(false,'200',`{ c: ${short(c,20)} }`);
+  addLog(lc,'recv','[5] Défi reçu','c = '+short(c,20));
+
+  // ── Côté serveur — /challenge ──
+  await sleep(80);
+  addLog(ls,'recv','[1] POST /challenge reçu',`username="${username}"  R=${ptStr(R)}`);
+  await sleep(80);
+  addLog(ls,'local','[2] Génération du défi','c = randomScalar()');
+  await sleep(80);
+  addLog(ls,'local','[3] Stockage temporaire','challenges.set(username, { R, c, expiresAt: now+30s })');
+  await sleep(80);
+  addLog(ls,'send','[4] Réponse 200',`{ c: ${short(c,20)} }`);
+
+  addLog(lc,'local','[6] Calcul de la réponse','s = r + c·x  mod ORDER');
+  await sleep(150);
+  const s=mod(r+mod(c*x,ORDER),ORDER);
+  addLog(lc,'local','s  (réponse)',short(s,32));
+  addLog(lc,'local','Propriété clé','x n\'est pas extractible depuis s sans connaître r');
+
+  addLog(lc,'send','[7] Envoi preuve','→ POST /verify  { username, s }');
+  addNet(true,'POST /verify',`username="${username}"  s=${short(s,20)}`);
+
+  const r2=await fetch(`${API}/verify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,s:s.toString()})});
+  const d2=await r2.json();
+
+  // ── Côté serveur — /verify ──
+  await sleep(80);
+  addLog(ls,'recv','[5] POST /verify reçu',`username="${username}"  s=${short(s,20)}`);
+  await sleep(80);
+  addLog(ls,'local','[6] Vérification','LHS = s·G    RHS = R + c·P');
+
+  if(r2.ok){
+    addNet(false,'200 OK','{ token: "eyJhbGci…" }');
+    addLog(lc,'ok','Connexion réussie','Authentifié ! Le mot de passe n\'a jamais été transmis.');
+    await sleep(80);
+    addLog(ls,'ok','[7] Preuve valide','LHS == RHS  →  JWT émis');
+  } else {
+    addNet(false,r2.status.toString(),JSON.stringify(d2));
+    addLog(lc,'err','Connexion refusée',d2.error);
+    await sleep(80);
+    addLog(ls,'err','[7] Preuve invalide','LHS ≠ RHS  →  401');
+  }
+};
+</script>
+</body>
+</html>
