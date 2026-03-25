@@ -18,11 +18,11 @@ Imagine Alice has solved the following Sudoku puzzle. Bob wants to verify that A
 
 **The puzzle (public):**
 
-![Sudoku puzzle](images/sudoku_de_base.png)
+![Sudoku puzzle](images/sudoku_base.png)
 
 **The solution (secret):**
 
-![Sudoku solution](images/solution_sudoku.png)
+![Sudoku solution](images/sudoku_solution.png)
 
 ### How the ZKP works
 
